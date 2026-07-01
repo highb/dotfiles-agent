@@ -1,0 +1,4 @@
+[".local/share/caveman"]
+  type = "git-repo"
+  url = "https://github.com/highb/caveman-english.git"
+  refreshPeriod = "168h"

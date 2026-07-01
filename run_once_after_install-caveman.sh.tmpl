@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# run_once_after_install-caveman.sh
+# Installs caveman-english hooks into Claude Code (~/.claude).
+# Runs once at `chezmoi apply` time, after externals are cloned.
+# Re-runs if this file's content changes (chezmoi run_once semantics).
+set -euo pipefail
+
+CAVEMAN_DIR="$HOME/.local/share/caveman"
+
+# Require git
+if ! command -v git >/dev/null 2>&1; then
+  echo "caveman installer: 'git' is required but not found on PATH." >&2
+  exit 1
+fi
+
+# Require node ≥18 (needed by bin/install.js)
+if ! command -v node >/dev/null 2>&1; then
+  echo "caveman installer: 'node' (≥18) is required but not found on PATH." >&2
+  echo "  macOS:  brew install node" >&2
+  echo "  Linux:  https://nodejs.org or https://github.com/nvm-sh/nvm" >&2
+  exit 1
+fi
+
+NODE_MAJOR=$(node -p "process.versions.node.split('.')[0]")
+if [ "$NODE_MAJOR" -lt 18 ]; then
+  echo "caveman installer: Node $NODE_MAJOR too old; need ≥18." >&2
+  exit 1
+fi
+
+if [ ! -d "$CAVEMAN_DIR" ]; then
+  echo "caveman installer: expected clone not found at $CAVEMAN_DIR" >&2
+  echo "  Run 'chezmoi update' to re-fetch externals." >&2
+  exit 1
+fi
+
+cd "$CAVEMAN_DIR"
+bash install.sh
