@@ -9,7 +9,9 @@ Loads the sibling script by path so it works both in the chezmoi source tree
 (where the file is named executable_token_map.py) and at the installed location
 (~/.claude/skills/.../token_map.py).
 """
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import tempfile
@@ -141,10 +143,14 @@ class MainAndRender(unittest.TestCase):
             f.write("\n")
             path = f.name
         self.addCleanup(os.unlink, path)
-        self.assertEqual(tm.main([path]), 0)
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = tm.main([path])
+        self.assertEqual(rc, 0)
 
     def test_main_errors_on_missing_file(self):
-        self.assertEqual(tm.main(["/does/not/exist.jsonl"]), 1)
+        with contextlib.redirect_stderr(io.StringIO()):
+            rc = tm.main(["/does/not/exist.jsonl"])
+        self.assertEqual(rc, 1)
 
     def test_render_flags_repeated_bash_head(self):
         m = tm.analyze([assistant(tool_use("Bash", command="git a")),

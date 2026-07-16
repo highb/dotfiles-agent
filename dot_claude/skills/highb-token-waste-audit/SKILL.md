@@ -169,7 +169,13 @@ and name the closest near-miss.
 `token_map.py`'s parsing lives in pure functions (`analyze`, `project_slug`,
 `locate_transcript`); `test_token_map.py` covers them with stdlib `unittest`
 (no pip install). If you change the transcript schema assumptions or the slug
-scheme, run the suite from this directory:
+scheme, run the suite. From the dotfiles repo root:
+
+```bash
+make test                            # runs every skill's suite
+```
+
+Or run this skill's suite directly from its own directory:
 
 ```bash
 python3 test_token_map.py            # or: python3 -m unittest -v
