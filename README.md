@@ -7,6 +7,13 @@ Agent-oriented dotfiles managed by [chezmoi](https://www.chezmoi.io).
 - [caveman-english](https://github.com/highb/caveman-english) — Brandon's fork
   of the caveman Claude Code extension, vendored into `~/.local/share/caveman`
   and wired into `~/.claude` via its hook installer.
+- Agent skills under `~/.claude/skills/` — portable [`SKILL.md`](https://docs.claude.com/en/docs/claude-code/skills)
+  files (`name` + `description` frontmatter, Markdown body) that load into any
+  agent harness supporting the skills format. Currently:
+  - `highb-token-waste-audit` — session meta-analysis: find mechanical,
+    repeatable token sinks and route each to its cheapest durable home — shared
+    team tooling, a shared docs/runbook update, personal dotfiles, or an agent
+    CLAUDE.md/skill note.
 
 ## Bootstrap
 
