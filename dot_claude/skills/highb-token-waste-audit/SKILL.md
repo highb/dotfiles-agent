@@ -163,3 +163,14 @@ and name the closest near-miss.
   mechanical scaffolding around it.
 - Report honestly: if the biggest sink was irreducible task work, say so rather
   than inventing marginal automation to fill the table.
+
+## Maintaining this skill
+
+`token_map.py`'s parsing lives in pure functions (`analyze`, `project_slug`,
+`locate_transcript`); `test_token_map.py` covers them with stdlib `unittest`
+(no pip install). If you change the transcript schema assumptions or the slug
+scheme, run the suite from this directory:
+
+```bash
+python3 test_token_map.py            # or: python3 -m unittest -v
+```
