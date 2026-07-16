@@ -36,58 +36,33 @@ A candidate is work that is all three of:
 Work that is one-off, or where each instance needs a genuine decision, is **not**
 a candidate — say so and move on. Do not manufacture automation for its own sake.
 
-## Step 1 — locate the transcript
+## Step 1 — extract the token map
 
-The current session's raw log is JSONL under the project's Claude dir. Pick the
-most-recently-modified one:
-
-```bash
-proj=~/.claude/projects/$(pwd | sed 's#/#-#g')
-ls -t "$proj"/*.jsonl 2>/dev/null | head -1
-```
-
-If that path is empty (different harness, or cwd slug mismatch), fall back to
-your own in-context memory of the session — you lived it. The transcript just
-makes the token accounting exact.
-
-## Step 2 — extract the token map
-
-Each `assistant` row carries `message.usage` (token counts) and any `tool_use`
-blocks (`name` + `input`). Each `user`/`attachment` row carries `tool_result`
-sizes. Rank tools by frequency and by the context they dragged in:
+Run the bundled `token_map.py` — it sits in this skill's own directory
+(`~/.claude/skills/highb-token-waste-audit/` under Claude Code; use the path
+this `SKILL.md` was loaded from on any other harness). With no argument it
+auto-locates the most-recently-modified transcript for the current working
+directory under `~/.claude/projects/<slug>/`; pass a path to target a specific
+one:
 
 ```bash
-f=$(ls -t ~/.claude/projects/$(pwd | sed 's#/#-#g')/*.jsonl | head -1)
-python3 - "$f" <<'PY'
-import sys, json
-from collections import Counter, defaultdict
-rows = [json.loads(l) for l in open(sys.argv[1])]
-tool_calls = Counter()
-bash_cmds  = Counter()
-out_tokens = 0
-for r in rows:
-    m = r.get('message')
-    if not isinstance(m, dict): continue
-    if m.get('role') == 'assistant':
-        out_tokens += (m.get('usage') or {}).get('output_tokens', 0)
-        for b in m.get('content', []):
-            if isinstance(b, dict) and b.get('type') == 'tool_use':
-                name = b.get('name')
-                tool_calls[name] += 1
-                if name == 'Bash':
-                    cmd = (b.get('input') or {}).get('command', '')
-                    head = cmd.strip().split()[0] if cmd.strip() else ''
-                    bash_cmds[head] += 1
-print('output tokens (approx model work):', out_tokens)
-print('\ntool call frequency:')
-for name, n in tool_calls.most_common():
-    print(f'  {n:3}  {name}')
-print('\nbash command heads (repetition = script candidate):')
-for cmd, n in bash_cmds.most_common(15):
-    flag = '  <-- repeated' if n > 1 else ''
-    print(f'  {n:3}  {cmd}{flag}')
-PY
+skill_dir=~/.claude/skills/highb-token-waste-audit   # or wherever this SKILL.md lives
+python3 "$skill_dir/token_map.py"                     # auto-locate this session
+python3 "$skill_dir/token_map.py" /path/to/session.jsonl
 ```
+
+It reports, from one pass over the JSONL:
+
+- **output tokens** — approximate model work this session.
+- **tool call frequency** — every tool by count.
+- **bash command heads** — repeated heads flagged `<-- repeated`; each is a
+  script candidate.
+- **context pulled in by tool** — total `tool_result` bytes per tool, i.e. how
+  much each tool dragged into the window (the expensive leg of the rubric above).
+
+If it prints "no transcript found" (different harness, or cwd slug mismatch),
+fall back to your own in-context memory of the session — you lived it. The
+transcript just makes the token accounting exact.
 
 Then read the transcript for **sequences**: the same 3–4 tool calls in the same
 order (e.g. `list_endpoints` → `curl local_url` → `service_logs` on failure) is a
@@ -99,7 +74,7 @@ out something that is stable and knowable (an API shape, a file layout, a login
 flow, a deploy sequence). That's a docs/skill/memory candidate, not a script
 candidate.
 
-## Step 3 — before proposing, check it doesn't already exist
+## Step 2 — before proposing, check it doesn't already exist
 
 Two dead ends to rule out first:
 
@@ -130,7 +105,7 @@ Two dead ends to rule out first:
   environment it creates — e.g. a `dotfiles set --repo <URL>` step. So "put it in
   your dotfiles" is a concrete, supported action, not hand-waving.
 
-## Step 4 — route each candidate to its home
+## Step 3 — route each candidate to its home
 
 Decide with this tree, in order:
 
@@ -140,7 +115,7 @@ Decide with this tree, in order:
 | Repeated **knowledge lookup** the whole team re-derives (API shape, deploy sequence, service layout, "how do I X") | **Shared team docs** — a runbook / wiki / docs-site update | One authoritative page kills the re-derivation for everyone. Cheaper than tooling; no code, just prose that has to be findable. |
 | Personal workflow, per-user paths, editor/git/shell preference; no value to anyone else | **Personal dotfiles repo** (shell fn / alias / chezmoi), wired into agent envs via the tool's dotfiles hook | Light lift, no PR, no review. Idiosyncratic-by-design work should never bloat shared tooling. |
 | Re-derived knowledge that only **this agent / this user** hits, not the whole team | **Agent CLAUDE.md note or a skill** | Nothing to run — the fix is to record the fact so no future session re-reasons it. Link `[[related-memory]]` if it fits the memory system. |
-| Capability already exists (Step 3) but went unused | **CLAUDE.md / skill / docs pointer** to the existing command or page | The gap is discovery, not tooling. |
+| Capability already exists (Step 2) but went unused | **CLAUDE.md / skill / docs pointer** to the existing command or page | The gap is discovery, not tooling. |
 | One-off, or each instance needs a judgment call | **Skip** | Say explicitly why it is not automatable. Do not invent a script. |
 
 **Tie-breaker (shared vs. personal):** ask "would a teammate who has never seen my
@@ -157,7 +132,7 @@ that hits a shared endpoint can pull that whole obligation in. Flag it in the
 proposal so the reader sizes the work honestly — a pure client-side convenience
 wrapper (no new shared endpoint) does not.
 
-## Step 5 — output
+## Step 4 — output
 
 Produce a ranked table, highest estimated savings first. One row per candidate:
 
@@ -175,14 +150,15 @@ Produce a ranked table, highest estimated savings first. One row per candidate:
 Close with a **one-line recommendation** on what to do first — usually the single
 highest-savings, lowest-effort candidate (a dotfiles alias, a docs paragraph, or a
 CLAUDE.md note), not the ambitious shared-tooling subcommand. If nothing clears the
-bar in Step 1, say the session was already tight and name the closest near-miss.
+bar — repeated + deterministic + expensive — say the session was already tight
+and name the closest near-miss.
 
 ## Guardrails
 
 - Never propose scripting anything that embeds a secret, token, or credential —
   those belong in the secret mechanisms, not a dotfiles alias or committed script.
 - Don't propose a shared command that duplicates an existing one, or a docs page
-  that already exists (Step 3).
+  that already exists (Step 2).
 - Don't count the model's *reasoning about the actual task* as waste — only the
   mechanical scaffolding around it.
 - Report honestly: if the biggest sink was irreducible task work, say so rather
