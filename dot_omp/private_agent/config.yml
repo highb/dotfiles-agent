@@ -1,0 +1,51 @@
+startup: 
+  checkUpdate: false
+  setupWizard: false
+  quiet: true
+display: 
+  cacheMissMarker: true
+task: 
+  showResolvedModelBadge: true
+  eager: default
+  isolation: 
+    mode: auto
+hideThinkingBlock: true
+omitThinking: true
+textVerbosity: low
+personality: pragmatic
+steeringMode: all
+followUpMode: all
+interruptMode: immediate
+loop: 
+  mode: prompt
+doubleEscapeAction: tree
+share: 
+  store: blob
+marketplace: 
+  autoUpdate: notify
+collapseChangelog: true
+branchSummary: 
+  enabled: true
+compaction: 
+  handoffSaveToDisk: true
+edit: 
+  mode: hashline
+readLineNumbers: true
+read: 
+  summarize: 
+    prose: false
+bashInterceptor: 
+  enabled: true
+python: 
+  kernelMode: session
+inspect_image: 
+  enabled: true
+checkpoint: 
+  enabled: true
+github: 
+  enabled: true
+mcp: 
+  discoveryMode: true
+  notifications: true
+secrets: 
+  enabled: true
